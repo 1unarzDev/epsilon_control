@@ -1,10 +1,5 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.8)
 project(epsilon_control)
-
-# Default to C99
-if(NOT CMAKE_C_STANDARD)
-  set(CMAKE_C_STANDARD 99)
-endif()
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
@@ -16,15 +11,23 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
 
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
-endif()
+add_executable(motor
+  src/motor.cpp
+)
 
-install(
-  DIRECTORY epsilon_control
-  DESTINATION share/${PROJECT_NAME}
+ament_target_dependencies(motor
+  rclcpp
+)
+
+target_link_libraries(motor
+  wiringPi
+)
+
+install(TARGETS
+  motor
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_package()
