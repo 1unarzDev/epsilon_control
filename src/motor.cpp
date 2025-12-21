@@ -1,21 +1,48 @@
 #include <rclcpp/rclcpp.hpp>
 #include <wiringPi.h>
 
-int main(int argc, char **argv) {
-  rclcpp::init(argc, argv);
+class MotorNode : public rclcpp::Node
+{
+public:
+    MotorNode(int pin) : Node("motor_node"), pin_(pin)
+    {
+        if (wiringPiSetup() == -1) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to initialize WiringPi");
+            throw std::runtime_error("WiringPi init failed");
+        }
 
-  wiringPiSetup();
-  pinMode(17, OUTPUT);
+        pinMode(pin_, OUTPUT);
 
-  auto node = rclcpp::Node::make_shared("gpio_node");
+        // Simple timer to blink PWM-like signal
+        timer_ = this->create_wall_timer(
+            std::chrono::milliseconds(100),
+            std::bind(&MotorNode::togglePin, this)
+        );
+    }
 
-  while (rclcpp::ok()) {
-    digitalWrite(17, HIGH);
-    delay(500);
-    digitalWrite(17, LOW);
-    delay(500);
-  }
+private:
+    void togglePin()
+    {
+        digitalWrite(pin_, state_);
+        state_ = !state_;
+    }
 
-  rclcpp::shutdown();
-  return 0;
+    int pin_;
+    int state_ = LOW;
+    rclcpp::TimerBase::SharedPtr timer_;
+};
+
+int main(int argc, char **argv)
+{
+    rclcpp::init(argc, argv);
+
+    int pin = 0;  // WiringPi pin 0 (GPIO 17)
+    if (argc > 1) pin = std::stoi(argv[1]);
+
+    auto node = std::make_shared<MotorNode>(pin);
+    RCLCPP_INFO(node->get_logger(), "Starting motor node on WiringPi pin %d", pin);
+
+    rclcpp::spin(node);
+    rclcpp::shutdown();
+    return 0;
 }
